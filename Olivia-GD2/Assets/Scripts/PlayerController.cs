@@ -1,7 +1,8 @@
 using UnityEngine;
+using UnityEngine.Audio;
 using UnityEngine.InputSystem;
-using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 public class PlayerController : MonoBehaviour
 {
@@ -12,6 +13,11 @@ public class PlayerController : MonoBehaviour
     public GameObject bulletPrefab;
     public GameObject shootFX;
     public GameObject hitFX;
+
+    public AudioSource audioSource;
+    public AudioClip shootSFX;
+    public AudioClip hitSFX;
+    public AudioClip deathSFX;
 
     public float bulletSpeed = 10;
     public float speed = 10;
@@ -27,6 +33,9 @@ public class PlayerController : MonoBehaviour
     private float maxHp;
 
     public float deathDuration = 5;
+    public float ragdollForce = 5;
+
+    public PlayerInput playerInput;
 
     private void Start()
     {
@@ -40,7 +49,7 @@ public class PlayerController : MonoBehaviour
         Vector3 vZ = moveInput.y * speed * transform.forward;
         rig.linearVelocity = vX + vY + vZ;
 
-        float rotation = moveInput.x * Time.fixedDeltaTime * speed * 15;
+        float rotation = moveInput.x * Time.fixedDeltaTime * speed * 5;
         transform.Rotate(0, rotation, 0);
     }
 
@@ -64,8 +73,9 @@ public class PlayerController : MonoBehaviour
 
     public void OnShoot(InputAction.CallbackContext context)
     {
-        if (context.performed)
+        if(context.performed)
         {
+            if (shootSFX) audioSource.PlayOneShot(shootSFX);
             if (shootFX) Instantiate(shootFX, bulletPoint.position, bulletPoint.rotation);
 
             GameObject bullet = Instantiate(bulletPrefab, bulletPoint.position, bulletPoint.rotation);
@@ -77,6 +87,7 @@ public class PlayerController : MonoBehaviour
     {
         if (hp > 0)
         {
+            if (hitSFX) audioSource.PlayOneShot(hitSFX);
             if (hitFX) Instantiate(hitFX, transform.position, transform.rotation);
 
             hp -= damage;
@@ -87,6 +98,28 @@ public class PlayerController : MonoBehaviour
             }
             else
             {
+                if (deathSFX) audioSource.PlayOneShot(deathSFX);
+
+                playerInput.enabled = false;
+
+                rig.mass = 3;
+
+                rig.constraints = RigidbodyConstraints.None;
+
+                rig.linearVelocity = ragdollForce * (Vector3.up + new Vector3
+                (
+                    Random.Range(-1, 1),
+                    Random.Range(-1, 1),
+                    Random.Range(-1, 1)
+                ).normalized);
+
+                rig.angularVelocity = new Vector3
+                (
+                    Random.Range(-180, 180),
+                    Random.Range(-180, 180),
+                    Random.Range(-180, 180)
+                );
+
                 Invoke(nameof(Reload), deathDuration);
             }
         }
